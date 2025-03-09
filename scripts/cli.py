@@ -288,16 +288,18 @@ def transcribe(
         processed_files = 0
         total_time = 0.0
 
-        with click.progressbar(
-            to_process, label='Processing files', item_show_func=lambda p: p.name if p else ''
-        ) as files:
-            for video_file in files:
-                success, elapsed_time = process_single_file(
-                    video_file, url, language, auto_language, output_format, None
-                )
-                if success:
-                    processed_files += 1
-                    total_time += elapsed_time
+        total_to_process = len(to_process)
+        click.echo(f"\nProcessing {total_to_process} files:")
+
+        for idx, video_file in enumerate(to_process, 1):
+            click.echo(f"[{idx}/{total_to_process}] Processing {video_file.name}...")
+            success, elapsed_time = process_single_file(video_file, url, language, auto_language, output_format, None)
+            if success:
+                processed_files += 1
+                total_time += elapsed_time
+                click.echo(f"✓ Completed in {timedelta(seconds=int(elapsed_time))}")
+            else:
+                click.echo("✗ Failed")
 
         # Show summary
         avg_time = total_time / processed_files if processed_files > 0 else 0
