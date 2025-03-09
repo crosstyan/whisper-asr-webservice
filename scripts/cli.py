@@ -3,7 +3,7 @@
 import click
 import httpx
 from pathlib import Path
-from typing import Final
+from typing import Final, Optional
 import time
 from datetime import timedelta
 
@@ -114,6 +114,9 @@ LANGUAGES: Final[dict[str, str]] = {
 
 LANGUAGE_CODES: Final[list[str]] = sorted(LANGUAGES.keys())
 
+# https://ahmetoner.com/whisper-asr-webservice/endpoints/
+SUPPORTED_OUTPUT_FORMATS: Final[tuple[str, ...]] = ('srt', 'vtt', 'text', 'json', 'tsv')
+
 VIDEO_FORMATS: Final[tuple[str, ...]] = (
     "*.mp4",
     "*.mkv",
@@ -129,22 +132,24 @@ VIDEO_FORMATS: Final[tuple[str, ...]] = (
 )
 
 
+def output_file_name(input_file: Path, output_suffix: str, language: Optional[str] = None) -> Path:
+    if language is None:
+        return input_file.with_suffix(f'.{output_suffix}')
+    else:
+        return input_file.with_suffix(f'.{language}.{output_suffix}')
+
+
 def process_single_file(
     input_file: Path,
     url: str,
-    language: str,
-    auto_language: bool,
     output_format: str,
-    output_file: Path | None,
+    language: Optional[str] = None,
+    output_file: Optional[Path] = None,
 ) -> tuple[bool, float]:
     """Process a single video file and return success status and processing time."""
-
     # If output file is not specified, use input filename with new extension
     if output_file is None:
-        if auto_language:
-            output_file = input_file.with_suffix(f'.{output_format}')
-        else:
-            output_file = input_file.with_suffix(f'.{language}.{output_format}')
+        output_file = output_file_name(input_file, output_format, language)
 
     # Skip if subtitle file already exists
     if output_file.exists():
@@ -155,7 +160,7 @@ def process_single_file(
     files = {'audio_file': input_file.open('rb')}
 
     # Prepare query parameters
-    if auto_language:
+    if language is None:
         params = {'output': output_format}
     else:
         params = {'output': output_format, 'language': language}
@@ -183,10 +188,6 @@ def process_single_file(
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         return False, 0.0
-
-
-# https://ahmetoner.com/whisper-asr-webservice/endpoints/
-SUPPORTED_OUTPUT_FORMATS: Final[tuple[str, ...]] = ('srt', 'vtt', 'text', 'json', 'tsv')
 
 
 @click.command()
@@ -229,15 +230,14 @@ def transcribe(
     """
     if input_path.is_file():
         if dry_run:
-            output_name = (
-                output_file
-                if output_file
-                else input_path.with_suffix(f'.{language if not auto_language else ""}{output_format}')
-            )
+            output_name = output_file_name(input_path, output_format, None if auto_language else language)
             click.echo(f"Would process: {input_path}")
             click.echo(f"Would save to: {output_name}")
             return
-        process_single_file(input_path, url, language, auto_language, output_format, output_file)
+
+        # For single file processing, pass language as None if auto_language is True
+        lang = None if auto_language else language
+        process_single_file(input_path, url, output_format, lang, output_file)
     else:
         # Scan directory and collect files
         video_files: list[Path] = []
@@ -258,8 +258,10 @@ def transcribe(
         to_process: list[Path] = []
         to_skip: list[Path] = []
 
+        lang = None if auto_language else language
+
         for video_file in video_files:
-            output_file = video_file.with_suffix(f'.{language if not auto_language else ""}{output_format}')
+            output_file = output_file_name(video_file, output_format, lang)
             if output_file.exists():
                 to_skip.append(video_file)
             else:
@@ -268,7 +270,7 @@ def transcribe(
         if to_process:
             click.echo("\nFiles to be processed:")
             for idx, file in enumerate(to_process, 1):
-                output_name = file.with_suffix(f'.{language if not auto_language else ""}{output_format}')
+                output_name = output_file_name(file, output_format, lang)
                 click.echo(f"{idx}. {file.name} -> {output_name.name}")
 
         if to_skip:
@@ -293,7 +295,7 @@ def transcribe(
 
         for idx, video_file in enumerate(to_process, 1):
             click.echo(f"[{idx}/{total_to_process}] Processing {video_file.name}...")
-            success, elapsed_time = process_single_file(video_file, url, language, auto_language, output_format, None)
+            success, elapsed_time = process_single_file(video_file, url, output_format, lang, None)
             if success:
                 processed_files += 1
                 total_time += elapsed_time
