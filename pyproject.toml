@@ -12,12 +12,14 @@ packages = [{ include = "app" }]
 whisper-asr-webservice = "app.webservice:start"
 
 [[tool.poetry.source]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
 priority = "explicit"
 
 [tool.poetry.dependencies]
 python = "<3.13,>=3.10"
+click = "^8.1.7"
+httpx = "^0.27.0"
 fastapi = "^0.115.8"
 uvicorn = { extras = ["standard"], version = "^0.34.0" }
 python-multipart = "^0.0.20"
@@ -30,14 +32,14 @@ tqdm = "^4.67.1"
 llvmlite = "^0.44.0"
 numba = "^0.61.0"
 torch = [
-    { version = "2.6.0", source = "pypi", markers = "sys_platform == 'darwin'"},
-    { version = "2.6.0", source = "pypi", markers = "platform_machine == 'aarch64' and sys_platform != 'darwin'"},
-    { version = "2.6.0", source = "pytorch-cpu", markers = "platform_machine == 'x86_64' and sys_platform != 'darwin'" },
+    { version = "2.6.0", source = "pypi", markers = "sys_platform == 'darwin'" },
+    { version = "2.6.0", source = "pypi", markers = "platform_machine == 'aarch64' and sys_platform != 'darwin'" },
+    { version = "2.6.0", source = "pytorch-cu124", markers = "platform_machine == 'x86_64' and sys_platform != 'darwin'" },
 ]
 torchaudio = [
-    { version = "2.6.0", source = "pypi", markers = "sys_platform == 'darwin'"},
-    { version = "2.6.0", source = "pypi", markers = "platform_machine == 'aarch64' and sys_platform != 'darwin'"},
-    { version = "2.6.0", source = "pytorch-cpu", markers = "platform_machine == 'x86_64' and sys_platform != 'darwin'" },
+    { version = "2.6.0", source = "pypi", markers = "sys_platform == 'darwin'" },
+    { version = "2.6.0", source = "pypi", markers = "platform_machine == 'aarch64' and sys_platform != 'darwin'" },
+    { version = "2.6.0", source = "pytorch-cu124", markers = "platform_machine == 'x86_64' and sys_platform != 'darwin'" },
 ]
 
 [poetry.group.dev.dependencies]
@@ -60,16 +62,16 @@ line-length = 120
 
 [tool.ruff.lint]
 select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "C",  # flake8-comprehensions
-    "B",  # flake8-bugbear
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    "I", # isort
+    "C", # flake8-comprehensions
+    "B", # flake8-bugbear
 ]
 ignore = [
-    "E501",  # line too long, handled by black
-    "C901",  # too complex
+    "E501", # line too long, handled by black
+    "C901", # too complex
 ]
 
 [tool.ruff.lint.isort]
