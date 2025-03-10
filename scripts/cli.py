@@ -215,6 +215,12 @@ def process_single_file(
     is_flag=True,
     help='Show what would be processed without actually processing any files.',
 )
+@click.option(
+    '--recursive',
+    '-r',
+    is_flag=True,
+    help='Recursively scan subdirectories for video files.',
+)
 def transcribe(
     input_path: Path,
     url: str,
@@ -223,6 +229,7 @@ def transcribe(
     output_format: str,
     output_file: Path | None,
     dry_run: bool,
+    recursive: bool,
 ):
     """Transcribe audio/video file(s) using Whisper ASR Web Service.
 
@@ -241,10 +248,13 @@ def transcribe(
     else:
         # Scan directory and collect files
         video_files: list[Path] = []
-        click.echo(f"Scanning directory {input_path} for video files...")
+        click.echo(f"Scanning directory {input_path} for video files{'recursively' if recursive else ''}...")
 
         for pattern in VIDEO_FORMATS:
-            video_files.extend(input_path.glob(pattern))
+            if recursive:
+                video_files.extend(input_path.glob(f"**/{pattern}"))
+            else:
+                video_files.extend(input_path.glob(pattern))
 
         if not video_files:
             click.echo("No video files found in the directory.")
